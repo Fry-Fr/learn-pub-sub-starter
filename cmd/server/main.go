@@ -21,6 +21,17 @@ func main() {
 	fmt.Println("Successfully connected to RabbitMQ")
 	fmt.Println("Starting Peril server...")
 
+	// make sure we have a durable queue for game logs attached to the topic exchange
+	exchange := routing.ExchangePerilTopic
+	queueName := routing.GameLogSlug
+	routingKey := fmt.Sprintf("%s.*", routing.GameLogSlug)
+	// durable queues survive restarts, are not auto‑deleted, and allow multiple consumers
+	_, _, err = pubsub.DeclareAndBind(connection, exchange, queueName, routingKey, pubsub.DurableQueue)
+	if err != nil {
+		fmt.Printf("Failed to declare and bind game_logs queue: %s\n", err)
+		return
+	}
+
 	gamelogic.PrintServerHelp()
 	for {
 		inputSlice := gamelogic.GetInput()

@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 
-	"github.com/bootdotdev/learn-pub-sub-starter/cmd/client/handlers"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/gamelogic"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/pubsub"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/routing"
@@ -31,7 +30,7 @@ func main() {
 	gameState := gamelogic.NewGameState(username)
 
 	// subscribe to pause/resume messages for this client
-	err = pubsub.SubscribeJSON(connection, exchange, queueName, routingKey, pubsub.TransientQueue, handlers.HandlerPause(gameState))
+	err = pubsub.SubscribeJSON(connection, exchange, queueName, routingKey, pubsub.TransientQueue, handlerPause(gameState))
 	if err != nil {
 		fmt.Printf("Failed to subscribe to pause messages: %s\n", err)
 		return

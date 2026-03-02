@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/bootdotdev/learn-pub-sub-starter/cmd/client/handlers"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/gamelogic"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/pubsub"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/routing"
@@ -27,13 +28,14 @@ func main() {
 	exchange := routing.ExchangePerilDirect
 	routingKey := routing.PauseKey
 	queueName := fmt.Sprintf("%s.%s", routingKey, username)
-	_, _, err = pubsub.DeclareAndBind(connection, exchange, queueName, routingKey, pubsub.TransientQueue)
+	gameState := gamelogic.NewGameState(username)
+
+	// subscribe to pause/resume messages for this client
+	err = pubsub.SubscribeJSON(connection, exchange, queueName, routingKey, pubsub.TransientQueue, handlers.HandlerPause(gameState))
 	if err != nil {
-		fmt.Printf("Failed to declare and bind queue: %s\n", err)
+		fmt.Printf("Failed to subscribe to pause messages: %s\n", err)
 		return
 	}
-
-	gameState := gamelogic.NewGameState(username)
 
 	for {
 		inputWords := gamelogic.GetInput()

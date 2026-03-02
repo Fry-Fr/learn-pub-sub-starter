@@ -24,15 +24,24 @@ func main() {
 		fmt.Printf("Failed to welcome client: %s\n", err)
 		return
 	}
-	exchange := routing.ExchangePerilDirect
 	routingKey := routing.PauseKey
 	queueName := fmt.Sprintf("%s.%s", routingKey, username)
 	gameState := gamelogic.NewGameState(username)
 
 	// subscribe to pause/resume messages for this client
-	err = pubsub.SubscribeJSON(connection, exchange, queueName, routingKey, pubsub.TransientQueue, handlerPause(gameState))
+	err = pubsub.SubscribeJSON(connection, routing.ExchangePerilDirect, queueName, routingKey, pubsub.TransientQueue, handlerPause(gameState))
 	if err != nil {
 		fmt.Printf("Failed to subscribe to pause messages: %s\n", err)
+		return
+	}
+
+	armyMovesRoutingKey := fmt.Sprintf("%s.*", routing.ArmyMovesPrefix)
+	armyMovesQueueName := fmt.Sprintf("%s.%s", routing.ArmyMovesPrefix, username)
+
+	// subscribe to move messages for this client
+	err = pubsub.SubscribeJSON(connection, routing.ExchangePerilTopic, armyMovesQueueName, armyMovesRoutingKey, pubsub.TransientQueue, handlerMove(gameState))
+	if err != nil {
+		fmt.Printf("Failed to subscribe to move messages: %s\n", err)
 		return
 	}
 
@@ -50,9 +59,19 @@ func main() {
 				fmt.Printf("Error processing command: %s\n", err)
 			}
 		case "move":
-			_, err = gameState.CommandMove(inputWords)
+			channel, err := connection.Channel()
+			if err != nil {
+				fmt.Printf("Failed to open a channel: %s\n", err)
+				return
+			}
+			defer channel.Close()
+			armyMove, err := gameState.CommandMove(inputWords)
 			if err != nil {
 				fmt.Printf("Error processing command: %s\n", err)
+			}
+			err = pubsub.PublishJSON(channel, routing.ExchangePerilTopic, armyMovesRoutingKey, armyMove)
+			if err != nil {
+				fmt.Printf("Failed to publish move: %s\n", err)
 			}
 		case "status":
 			gameState.CommandStatus()

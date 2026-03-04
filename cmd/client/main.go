@@ -18,6 +18,12 @@ func main() {
 		return
 	}
 	defer connection.Close()
+	ch, err := connection.Channel()
+	if err != nil {
+		fmt.Printf("Failed to open a channel: %s\n", err)
+		return
+	}
+	defer ch.Close()
 
 	username, err := gamelogic.ClientWelcome()
 	if err != nil {
@@ -39,9 +45,19 @@ func main() {
 	armyMovesQueueName := fmt.Sprintf("%s.%s", routing.ArmyMovesPrefix, username)
 
 	// subscribe to move messages for this client
-	err = pubsub.SubscribeJSON(connection, routing.ExchangePerilTopic, armyMovesQueueName, armyMovesRoutingKey, pubsub.TransientQueue, handlerMove(gameState))
+	err = pubsub.SubscribeJSON(connection, routing.ExchangePerilTopic, armyMovesQueueName, armyMovesRoutingKey, pubsub.TransientQueue, handlerMove(gameState, ch))
 	if err != nil {
 		fmt.Printf("Failed to subscribe to move messages: %s\n", err)
+		return
+	}
+
+	warRecognitionRoutingKey := fmt.Sprintf("%s.*", routing.WarRecognitionsPrefix)
+	warRecognitionQueueName := routing.WarRecognitionsPrefix
+
+	// subscribe to war recognition messages for this client
+	err = pubsub.SubscribeJSON(connection, routing.ExchangePerilTopic, warRecognitionQueueName, warRecognitionRoutingKey, pubsub.DurableQueue, handlerWar(gameState))
+	if err != nil {
+		fmt.Printf("Failed to subscribe to war recognition messages: %s\n", err)
 		return
 	}
 
@@ -59,17 +75,11 @@ func main() {
 				fmt.Printf("Error processing command: %s\n", err)
 			}
 		case "move":
-			channel, err := connection.Channel()
-			if err != nil {
-				fmt.Printf("Failed to open a channel: %s\n", err)
-				return
-			}
-			defer channel.Close()
 			armyMove, err := gameState.CommandMove(inputWords)
 			if err != nil {
 				fmt.Printf("Error processing command: %s\n", err)
 			}
-			err = pubsub.PublishJSON(channel, routing.ExchangePerilTopic, armyMovesRoutingKey, armyMove)
+			err = pubsub.PublishJSON(ch, routing.ExchangePerilTopic, armyMovesRoutingKey, armyMove)
 			if err != nil {
 				fmt.Printf("Failed to publish move: %s\n", err)
 			}

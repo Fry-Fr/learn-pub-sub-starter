@@ -55,7 +55,7 @@ func main() {
 	warRecognitionQueueName := routing.WarRecognitionsPrefix
 
 	// subscribe to war recognition messages for this client
-	err = pubsub.SubscribeJSON(connection, routing.ExchangePerilTopic, warRecognitionQueueName, warRecognitionRoutingKey, pubsub.DurableQueue, handlerWar(gameState))
+	err = pubsub.SubscribeJSON(connection, routing.ExchangePerilTopic, warRecognitionQueueName, warRecognitionRoutingKey, pubsub.DurableQueue, handlerWar(gameState, ch))
 	if err != nil {
 		fmt.Printf("Failed to subscribe to war recognition messages: %s\n", err)
 		return

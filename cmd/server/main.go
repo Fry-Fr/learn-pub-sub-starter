@@ -25,10 +25,9 @@ func main() {
 	exchange := routing.ExchangePerilTopic
 	queueName := routing.GameLogSlug
 	routingKey := fmt.Sprintf("%s.*", routing.GameLogSlug)
-	// durable queues survive restarts, are not auto‑deleted, and allow multiple consumers
-	_, _, err = pubsub.DeclareAndBind(connection, exchange, queueName, routingKey, pubsub.DurableQueue)
+	err = pubsub.SubscribeGob(connection, exchange, queueName, routingKey, pubsub.DurableQueue, handleGameLog())
 	if err != nil {
-		fmt.Printf("Failed to declare and bind game_logs queue: %s\n", err)
+		fmt.Printf("Failed to subscribe to game logs: %s\n", err)
 		return
 	}
 

@@ -6,6 +6,7 @@ import (
 
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/gamelogic"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/pubsub"
+	"github.com/bootdotdev/learn-pub-sub-starter/internal/routing"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -13,11 +14,10 @@ func handlerWar(gs *gamelogic.GameState, ch *amqp.Channel) func(gamelogic.Recogn
 	return func(rw gamelogic.RecognitionOfWar) pubsub.AckType {
 		defer fmt.Print("> ")
 		outcome, winner, loser := gs.HandleWar(rw)
-		outcomeStr := ""
 
-		gamelog := pubsub.GameLog{
+		gamelog := routing.GameLog{
 			CurrentTime: time.Now(),
-			Message:     outcomeStr,
+			Message:     "",
 			Username:    gs.Player.Username,
 		}
 
@@ -27,15 +27,15 @@ func handlerWar(gs *gamelogic.GameState, ch *amqp.Channel) func(gamelogic.Recogn
 		case gamelogic.WarOutcomeNoUnits:
 			return pubsub.NackDiscard
 		case gamelogic.WarOutcomeYouWon:
-			outcomeStr = fmt.Sprintf("%s won a war against %s", winner, loser)
+			gamelog.Message = fmt.Sprintf("%s won a war against %s", winner, loser)
 			pubsub.PublishGameLog(ch, gamelog)
 			return pubsub.Ack
 		case gamelogic.WarOutcomeOpponentWon:
-			outcomeStr = fmt.Sprintf("%s won a war against %s", winner, loser)
+			gamelog.Message = fmt.Sprintf("%s won a war against %s", winner, loser)
 			pubsub.PublishGameLog(ch, gamelog)
 			return pubsub.Ack
 		case gamelogic.WarOutcomeDraw:
-			outcomeStr = fmt.Sprintf("A war between %s and %s resulted in a draw", winner, loser)
+			gamelog.Message = fmt.Sprintf("A war between %s and %s resulted in a draw", winner, loser)
 			pubsub.PublishGameLog(ch, gamelog)
 			return pubsub.Ack
 		default:

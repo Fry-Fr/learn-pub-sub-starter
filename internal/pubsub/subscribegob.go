@@ -26,6 +26,13 @@ func SubscribeGob[T any](
 	if err != nil {
 		return err
 	}
+
+	err = ch.Qos(10, 0, false) // prefetch count = 10 for fair dispatch
+	if err != nil {
+		ch.Close()
+		return err
+	}
+
 	// note: we intentionally do not close the channel here because the consumer
 	// goroutine will use it for the lifetime of the program. The caller is
 	// responsible for closing the connection when the application exits.
